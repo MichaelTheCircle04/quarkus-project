@@ -1,7 +1,3 @@
--- Table: public.authors
-
--- DROP TABLE IF EXISTS public.authors;
-
 CREATE TABLE IF NOT EXISTS public.authors
 (
     author_id integer NOT NULL DEFAULT nextval('authors_author_id_seq'::regclass),
@@ -13,3 +9,6 @@ TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS public.authors
     OWNER to postgres;
+
+ALTER SEQUENCE public.authors_author_id_seq
+    OWNED BY public.authors.author_id;

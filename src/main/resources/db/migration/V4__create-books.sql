@@ -1,7 +1,3 @@
--- Table: public.books
-
--- DROP TABLE IF EXISTS public.books;
-
 CREATE TABLE IF NOT EXISTS public.books
 (
     book_id bigint NOT NULL DEFAULT nextval('books_book_id_seq'::regclass),
@@ -21,3 +17,6 @@ TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS public.books
     OWNER to postgres;
+
+ALTER SEQUENCE public.books_book_id_seq
+    OWNED BY public.books.book_id;

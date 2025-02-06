@@ -1,18 +1,19 @@
 package com.mtrifonov.quarkus.project.repos;
 
 import org.jooq.DSLContext;
-import org.jooq.Result;
 
 import static com.mtrifonov.jooq.generated.Tables.*;
 
-import com.mtrifonov.jooq.generated.tables.Books;
-import com.mtrifonov.jooq.generated.tables.records.BooksRecord;
-import com.mtrifonov.quarkus.project.entities.BookDTO;
+import java.util.List;
+import java.util.stream.Collectors;
 
-import org.jooq.Record;
+import com.mtrifonov.jooq.generated.tables.records.BooksRecord;
+import com.mtrifonov.quarkus.project.dto.BookDTO;
+import com.mtrifonov.quarkus.project.pagination.Page;
+import com.mtrifonov.quarkus.project.pagination.Pageable;
+
 import jakarta.inject.Singleton;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Singleton
 @Data
@@ -32,10 +33,17 @@ public class BookRepositoryImpl implements BookRepository {
 				.where(BOOKS.BOOK_ID.eq(id))
 				.fetchOneInto(BookDTO.class);
 		
-		System.out.println(res);
-		System.out.println(res.getClass());
-		
 		return res;
+	}
+
+	@Override
+	public List<BooksRecord> findAll(Pageable pageable) {
+		return create
+			.selectFrom(BOOKS)
+			.orderBy(pageable.getSort())
+			.limit(pageable.getPageSize())
+			.offset(pageable.getPageNum() + pageable.getPageSize())
+			.fetch().collect(Collectors.toList());
 	}
 
 	@Override
@@ -44,11 +52,8 @@ public class BookRepositoryImpl implements BookRepository {
 				.insertInto(BOOKS, BOOKS.TITLE, BOOKS.PRICE, BOOKS.AMOUNT, BOOKS.AUTHOR_ID)
 				.values(book.getTitle(), book.getPrice(), book.getAmount(), book.getAuthorId())
 				.returning()
-				.fetchOne();
-		
-		System.out.println(res);
-		System.out.println(res.getClass());
-		
+				.fetchOne();	
+
 		return res;
 	}
 
@@ -66,5 +71,4 @@ public class BookRepositoryImpl implements BookRepository {
 	public void deleteById(long id) {
 		create.delete(BOOKS).where(BOOKS.BOOK_ID.eq(id)).execute();	
 	}
-
 }

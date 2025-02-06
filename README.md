@@ -1,4 +1,4 @@
-# quarkus-study
+# quarkus-project
 
 This project uses Quarkus, the Supersonic Subatomic Java Framework.
 
