@@ -3,7 +3,6 @@ package com.mtrifonov.quarkus.project.pagination;
 import org.jboss.resteasy.reactive.RestQuery;
 
 import jakarta.ws.rs.DefaultValue;
-import jakarta.ws.rs.QueryParam;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

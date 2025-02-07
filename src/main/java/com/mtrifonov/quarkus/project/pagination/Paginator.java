@@ -2,25 +2,33 @@ package com.mtrifonov.quarkus.project.pagination;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.jooq.SortField;
 import org.jooq.impl.TableImpl;
 
 public class Paginator {
 
-    public static Pageable getPageable(PageInformation inf, TableImpl<?> table) {
+    public static Optional<Pageable> getPageable(Optional<PageInformation> optInf, TableImpl<?> table) {
+
+        if (optInf.isEmpty()) {
+            return Optional.empty();
+        }
+
+        var inf = optInf.get();
 
         var fields = prepareFields(inf.getSort(), table);
-        return Pageable.builder()
+        return Optional.of(Pageable.builder()
             .sort(fields)
             .pageSize(inf.getPageSize())
             .pageNum(inf.getPageNum())
-            .build();
+            .build());
     }
 
     private static List<SortField<?>> prepareFields(String[] sort, TableImpl<?> table) {
         
         List<SortField<?>> fields = new ArrayList<>();
+
         if (sort.length == 1) {
             return fields;
         } 

@@ -1,15 +1,14 @@
 package com.mtrifonov.quarkus.project.repos;
 
+import org.jooq.Condition;
 import org.jooq.DSLContext;
 
 import static com.mtrifonov.jooq.generated.Tables.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
-import com.mtrifonov.jooq.generated.tables.records.BooksRecord;
 import com.mtrifonov.quarkus.project.dto.BookDTO;
-import com.mtrifonov.quarkus.project.pagination.Page;
 import com.mtrifonov.quarkus.project.pagination.Pageable;
 
 import jakarta.inject.Singleton;
@@ -26,49 +25,119 @@ public class BookRepositoryImpl implements BookRepository {
 	}
 
 	@Override
-	public BookDTO findById(long id) {
-		var res = create
+	public BookDTO findById(long id) { //Ok
+
+		return create
+			.select(BOOKS.BOOK_ID, BOOKS.TITLE, BOOKS.PRICE, BOOKS.AMOUNT, BOOKS.AUTHOR_ID, AUTHORS.NAME)
+			.from(BOOKS).join(AUTHORS).on(BOOKS.AUTHOR_ID.eq(AUTHORS.AUTHOR_ID))
+			.where(BOOKS.BOOK_ID.eq(id))
+			.fetchOneInto(BookDTO.class);		
+	}
+
+	@Override
+	public List<BookDTO> findAll(Optional<Condition> conditionOpt, Optional<Pageable> pageableOpt) {
+
+		if (conditionOpt.isEmpty() && pageableOpt.isEmpty()) {
+			return findAll();
+		} else if (conditionOpt.isEmpty()) {
+			return findAll(pageableOpt.get());
+		}
+
+		var condition = conditionOpt.get();
+		var pageable = pageableOpt.get();
+
+		if (pageable.getSort().isEmpty()) {
+
+			return create
 				.select(BOOKS.BOOK_ID, BOOKS.TITLE, BOOKS.PRICE, BOOKS.AMOUNT, BOOKS.AUTHOR_ID, AUTHORS.NAME)
 				.from(BOOKS).join(AUTHORS).on(BOOKS.AUTHOR_ID.eq(AUTHORS.AUTHOR_ID))
-				.where(BOOKS.BOOK_ID.eq(id))
-				.fetchOneInto(BookDTO.class);
-		
-		return res;
-	}
+				.where(condition)
+				.limit(pageable.getPageSize())
+				.offset(pageable.getPageNum() * pageable.getPageSize())
+				.fetchInto(BookDTO.class);
+		}
 
-	@Override
-	public List<BooksRecord> findAll(Pageable pageable) {
 		return create
-			.selectFrom(BOOKS)
+			.select(BOOKS.BOOK_ID, BOOKS.TITLE, BOOKS.PRICE, BOOKS.AMOUNT, BOOKS.AUTHOR_ID, AUTHORS.NAME)
+			.from(BOOKS).join(AUTHORS).on(BOOKS.AUTHOR_ID.eq(AUTHORS.AUTHOR_ID))
+			.where(condition)
 			.orderBy(pageable.getSort())
 			.limit(pageable.getPageSize())
-			.offset(pageable.getPageNum() + pageable.getPageSize())
-			.fetch().collect(Collectors.toList());
+			.offset(pageable.getPageNum() * pageable.getPageSize())
+			.fetchInto(BookDTO.class);
 	}
 
 	@Override
-	public BooksRecord save(BookDTO book) {
-		var res = create
-				.insertInto(BOOKS, BOOKS.TITLE, BOOKS.PRICE, BOOKS.AMOUNT, BOOKS.AUTHOR_ID)
-				.values(book.getTitle(), book.getPrice(), book.getAmount(), book.getAuthorId())
-				.returning()
-				.fetchOne();	
+	public BookDTO save(BookDTO book) {
 
-		return res;
+		return create
+			.insertInto(BOOKS, BOOKS.TITLE, BOOKS.PRICE, BOOKS.AMOUNT, BOOKS.AUTHOR_ID)
+			.values(book.getTitle(), book.getPrice(), book.getAmount(), book.getAuthorId())
+			.returning().fetchOneInto(BookDTO.class);	
 	}
 
 	@Override
-	public void setPriceById(long id, int price) {
+	public void setPriceById(long id, int price) { //Ok
 		create.update(BOOKS).set(BOOKS.PRICE, price).execute();
 	}
 
 	@Override
-	public void setAmountById(long id, int amount) {
+	public void setAmountById(long id, int amount) { //Ok
 		create.update(BOOKS).set(BOOKS.AMOUNT, amount).execute();
 	}
 
 	@Override
-	public void deleteById(long id) {
+	public void deleteById(long id) { //Ok
 		create.delete(BOOKS).where(BOOKS.BOOK_ID.eq(id)).execute();	
+	}
+
+	@Override 
+	public long count(Optional<Condition> condition) { //Ok
+
+		if (condition.isEmpty()) {
+			return countAll();
+		}
+
+		return create
+			.selectCount()
+			.from(BOOKS)
+			.where(condition.get())
+			.fetchOne().value1();
+	}
+
+	private List<BookDTO> findAll() {
+
+		return create
+			.select(BOOKS.BOOK_ID, BOOKS.TITLE, BOOKS.PRICE, BOOKS.AMOUNT, BOOKS.AUTHOR_ID, AUTHORS.NAME)
+			.from(BOOKS).join(AUTHORS).on(BOOKS.AUTHOR_ID.eq(AUTHORS.AUTHOR_ID))
+			.fetchInto(BookDTO.class);
+	}
+
+	private List<BookDTO> findAll(Pageable pageable) {
+
+		if (pageable.getSort().isEmpty()) {
+
+			return create
+				.select(BOOKS.BOOK_ID, BOOKS.TITLE, BOOKS.PRICE, BOOKS.AMOUNT, BOOKS.AUTHOR_ID, AUTHORS.NAME)
+				.from(BOOKS).join(AUTHORS).on(BOOKS.AUTHOR_ID.eq(AUTHORS.AUTHOR_ID))
+				.limit(pageable.getPageSize())
+				.offset(pageable.getPageNum() * pageable.getPageSize())
+				.fetchInto(BookDTO.class);
+		}
+
+		return create
+			.select(BOOKS.BOOK_ID, BOOKS.TITLE, BOOKS.PRICE, BOOKS.AMOUNT, BOOKS.AUTHOR_ID, AUTHORS.NAME)
+			.from(BOOKS).join(AUTHORS).on(BOOKS.AUTHOR_ID.eq(AUTHORS.AUTHOR_ID))
+			.orderBy(pageable.getSort())
+			.limit(pageable.getPageSize())
+			.offset(pageable.getPageNum() * pageable.getPageSize())
+			.fetchInto(BookDTO.class);
+	}
+
+	private long countAll() {
+		return create
+			.selectCount()
+			.from(BOOKS)
+			.fetchOne().value1();
 	}
 }

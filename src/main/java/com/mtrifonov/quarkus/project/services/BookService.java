@@ -2,10 +2,17 @@ package com.mtrifonov.quarkus.project.services;
 
 import static com.mtrifonov.jooq.generated.Tables.BOOKS;
 
-import com.mtrifonov.jooq.generated.tables.records.BooksRecord;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.jooq.Condition;
+
 import com.mtrifonov.quarkus.project.dto.BookDTO;
 import com.mtrifonov.quarkus.project.pagination.Page;
 import com.mtrifonov.quarkus.project.pagination.PageInformation;
+import com.mtrifonov.quarkus.project.pagination.Pageable;
 import com.mtrifonov.quarkus.project.pagination.Paginator;
 import com.mtrifonov.quarkus.project.repos.BookRepository;
 
@@ -15,22 +22,62 @@ import jakarta.inject.Singleton;
 public class BookService {
 	
 	private final BookRepository bookRepo;
+	private final AuthorService authorService;
+	private final Map<Optional<Condition>, Long> elementsCount = new HashMap<>();
 	
-	public BookService(BookRepository bookRepo) {
+	public BookService(BookRepository bookRepo, AuthorService authorService) {
 		this.bookRepo = bookRepo;
+		this.authorService = authorService;
 	}
 	
 	public BookDTO getBookById(long id) {
 		return bookRepo.findById(id);
 	}
 
-    public Page<BookDTO> findAllBooks(PageInformation information) {
+    public Page<BookDTO> findAllBooks(Optional<PageInformation> information) {
 
 		var pageable = Paginator.getPageable(information, BOOKS);
-		return toPage(bookRepo.findAll(pageable).stream().map(this::toDto));
+		var content = bookRepo.findAll(Optional.empty(), pageable);
+
+		return toPage(content, Optional.empty(), pageable);
     }
+
+	public Page<BookDTO> findAllBooksWhereTitleLike(String title, Optional<PageInformation> information) {
+
+		var condition = Optional.of((Condition) BOOKS.TITLE.likeIgnoreCase(title));
+		var pageable = Paginator.getPageable(information, BOOKS);
+		var content = bookRepo.findAll(condition, pageable);
+
+		return toPage(content, condition, pageable);
+	}
+
 	
-	public BooksRecord createBook(BookDTO book) {
+	public Page<BookDTO> findAllBooksByAuthorId(int id, Optional<PageInformation> information) {
+		
+		var condition = Optional.of((Condition) BOOKS.AUTHOR_ID.eq(id));
+		var pageable = Paginator.getPageable(information, BOOKS);
+		var content = bookRepo.findAll(condition, pageable);
+		
+		return toPage(content, condition, pageable);
+	}
+
+	
+	public Page<BookDTO> findAllBooksByAuthorName(String name, Optional<PageInformation> information) {
+
+		var authorsIds = authorService
+			.findAuthorsByName(name, Optional.empty())
+			.getContent().stream()
+			.map(a -> a.getAuthorId())
+			.toList();
+
+		var condition = Optional.of((Condition) BOOKS.AUTHOR_ID.in(authorsIds));
+		var pageable = Paginator.getPageable(information, BOOKS);
+		var content = bookRepo.findAll(condition, pageable);
+		
+		return toPage(content, condition, pageable);
+	}
+	
+	public BookDTO createBook(BookDTO book) {
 		return bookRepo.save(book);
 	}
 	
@@ -46,7 +93,34 @@ public class BookService {
 		bookRepo.deleteById(id);
 	}
 
-	private BookDTO toDto() {
-		return nyll; 
+	private Page<BookDTO> toPage (List<BookDTO> books, Optional<Condition> condition, Optional<Pageable> optionalPageable) {
+
+		if (optionalPageable.isEmpty()) {
+			return Page.<BookDTO>builder().content(books).build();
+		}
+
+		var pageable = optionalPageable.get();
+		long totalElements;
+
+		if (elementsCount.containsKey(condition)) {
+			totalElements = elementsCount.get(condition);
+		} else {
+			totalElements = bookRepo.count(condition);
+			elementsCount.put(condition, totalElements);
+		}
+
+		int totalPages = (int) totalElements / pageable.getPageSize(); //Исходим из смелого предположения что страниц не будет больше Integer.MAX_VALUE
+		boolean nextPage = pageable.getPageNum() < totalPages;
+		boolean prevPage = pageable.getPageNum() > 0;
+
+		return Page.<BookDTO>builder()
+			.totalPages(totalPages)
+			.totalElements(totalElements)
+			.pageSize(pageable.getPageSize())
+			.pageNum(pageable.getPageNum())
+			.nextPage(nextPage)
+			.prevPage(prevPage)
+			.content(books)
+			.build();
 	}
 }

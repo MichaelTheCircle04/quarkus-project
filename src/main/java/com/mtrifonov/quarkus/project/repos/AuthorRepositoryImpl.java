@@ -1,10 +1,12 @@
 package com.mtrifonov.quarkus.project.repos;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.jooq.Condition;
 import org.jooq.DSLContext;
+import org.jooq.SortField;
 
 import static com.mtrifonov.jooq.generated.Tables.*;
 import com.mtrifonov.jooq.generated.tables.records.AuthorsRecord;
@@ -23,36 +25,53 @@ public class AuthorRepositoryImpl implements AuthorRepository {
     }
 
     @Override
-    public List<AuthorsRecord> findAllWhereNameLike(String name, Pageable pageable) {
+    public List<AuthorDTO> findAll(Optional<Condition> conditionOpt, Optional<Pageable> pageableOpt) {
+       
+        if (conditionOpt.isEmpty() && pageableOpt.isEmpty()) {
+            return findAll();
+        } else if (conditionOpt.isEmpty() && pageableOpt.isPresent()) {
+            return findAll(pageableOpt.get());
+        } else if (conditionOpt.isPresent() && pageableOpt.isEmpty()) {
+            return findAll(conditionOpt.get());
+        } 
 
-        if (pageable.getSort().size() == 0) {
-            return findAllWhereNameLikeUnsorted(name, pageable);
+        var condition = conditionOpt.get();
+        var pageable = pageableOpt.get();
+
+        if (pageable.getSort().isEmpty()) {
+            
+            return create
+                .selectFrom(AUTHORS)
+                .where(condition)
+                .limit(pageable.getPageSize())
+                .offset(pageable.getPageSize() * pageable.getPageNum())
+                .fetchInto(AuthorDTO.class);
         }
-
+            
         return create
             .selectFrom(AUTHORS)
-            .where(AUTHORS.NAME.likeIgnoreCase("%" + name + "%"))
+            .where(condition)
             .orderBy(pageable.getSort())
             .limit(pageable.getPageSize())
             .offset(pageable.getPageSize() * pageable.getPageNum())
-            .fetch().collect(Collectors.toList());
-    }
+            .fetchInto(AuthorDTO.class);
+        }
     
     @Override
-    public AuthorsRecord findById(int id) {
+    public AuthorDTO findById(int id) {
         return create
             .selectFrom(AUTHORS)
             .where(AUTHORS.AUTHOR_ID.eq(id))
-            .fetchOne();
+            .fetchOneInto(AuthorDTO.class);
     }
   
     @Override
-    public AuthorsRecord save(AuthorDTO author) {
+    public AuthorDTO save(AuthorDTO author) {
 
         return create
             .insertInto(AUTHORS, AUTHORS.NAME)
             .values(author.getName())
-            .returning().fetchOne();
+            .returning().fetchOneInto(AuthorDTO.class);
     }
 
     @Override
@@ -65,27 +84,50 @@ public class AuthorRepositoryImpl implements AuthorRepository {
     }
 
     @Override
-    public int count(Condition condition) {
+    public int count(Optional<Condition> condition) {
         
-        if (condition == null) {
+        if (condition.isEmpty()) {
             return countAll();
         }
 
         return create
             .selectCount()
             .from(AUTHORS)
-            .where(condition)
+            .where(condition.get())
             .fetchOne().value1();
     }
 
-    private List<AuthorsRecord> findAllWhereNameLikeUnsorted(String name, Pageable pageable) {
+    private List<AuthorDTO> findAll() {
 
         return create
             .selectFrom(AUTHORS)
-            .where(AUTHORS.NAME.likeIgnoreCase("%" + name + "%"))
+            .fetchInto(AuthorDTO.class);
+    }
+    
+    private List<AuthorDTO> findAll(Condition condition) {
+    
+        return create
+            .selectFrom(AUTHORS)
+            .where(condition)
+            .fetchInto(AuthorDTO.class);
+    }
+
+    private List<AuthorDTO> findAll(Pageable pageable) {
+
+        if (pageable.getSort().isEmpty()) {
+            return create
+                .selectFrom(AUTHORS)
+                .limit(pageable.getPageSize())
+                .offset(pageable.getPageSize() * pageable.getPageNum())
+                .fetchInto(AuthorDTO.class);
+        }
+
+        return create
+            .selectFrom(AUTHORS)
+            .orderBy(pageable.getSort())
             .limit(pageable.getPageSize())
             .offset(pageable.getPageSize() * pageable.getPageNum())
-            .fetch().collect(Collectors.toList());
+            .fetchInto(AuthorDTO.class);
     }
 
     private int countAll() {

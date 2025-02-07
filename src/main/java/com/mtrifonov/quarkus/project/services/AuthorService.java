@@ -2,20 +2,18 @@ package com.mtrifonov.quarkus.project.services;
 
 import static com.mtrifonov.jooq.generated.Tables.AUTHORS;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.jooq.Condition;
-import org.jooq.SortField;
-import org.jooq.impl.TableImpl;
 
-import com.mtrifonov.jooq.generated.tables.records.AuthorsRecord;
 import com.mtrifonov.quarkus.project.dto.AuthorDTO;
 import com.mtrifonov.quarkus.project.pagination.Page;
 import com.mtrifonov.quarkus.project.pagination.PageInformation;
 import com.mtrifonov.quarkus.project.pagination.Pageable;
+import com.mtrifonov.quarkus.project.pagination.Paginator;
 import com.mtrifonov.quarkus.project.repos.AuthorRepository;
 
 import jakarta.inject.Singleton;
@@ -24,32 +22,28 @@ import jakarta.inject.Singleton;
 public class AuthorService {
 
     private final AuthorRepository repository;
-    private final Map<String, Integer> elementsCount = new HashMap<>();
+    private final Map<Optional<Condition>, Integer> elementsCount = new HashMap<>();
 
     public AuthorService(AuthorRepository repository) {
         this.repository = repository;
     }
 
-    public Page<AuthorDTO> findAuthorsByName(String name, PageInformation information) {
+    public Page<AuthorDTO> findAuthorsByName(String name, Optional<PageInformation> information) {
+      
+        var condition = Optional.of((Condition) AUTHORS.NAME.likeIgnoreCase("%" + name + "%"));
+        var pageable = Paginator.getPageable(information, AUTHORS);
+        var authors = repository.findAll(condition, pageable);
 
-        var fields = prepareFields(information.getSort(), AUTHORS);
-        var pageable = Pageable.builder()
-            .sort(fields)
-            .pageSize(information.getPageSize())
-            .pageNum(information.getPageNum())
-            .build();
-
-        var dto = repository.findAllWhereNameLike(name, pageable).stream().map(this::toDto).toList();
-        return toPage(dto, name, pageable);
+        return toPage(authors, condition, pageable);
     };
 
     
     public AuthorDTO findAuthorById(int id) {
-        return toDto(repository.findById(id));
+        return repository.findById(id);
     }
 
     
-    public AuthorsRecord createAuthor(AuthorDTO author) {
+    public AuthorDTO createAuthor(AuthorDTO author) {
         return repository.save(author);
     } 
 
@@ -57,43 +51,21 @@ public class AuthorService {
         repository.deleteById(id);
     }
 
-    private AuthorDTO toDto(AuthorsRecord record) {
+    private Page<AuthorDTO> toPage(List<AuthorDTO> authors, Optional<Condition> condition, Optional<Pageable> optionalPageable) {
 
-        return AuthorDTO.builder()
-            .authorId(record.getAuthorId())
-            .name(record.getName())
-            .build();
-    }
-
-    private List<SortField<?>> prepareFields(String[] sort, TableImpl<?> table) {
-        
-        List<SortField<?>> fields = new ArrayList<>();
-        if (sort.length == 1) {
-            return fields;
-        } 
-
-        if (sort[sort.length - 1] == "asc") {
-            for (int i = 0; i < sort.length - 1; i++) {
-                fields.add(table.field(sort[i]).asc());
-            }
-        } else {
-            for (int i = 0; i < sort.length - 1; i++) {
-                fields.add(table.field(sort[i]).desc());
-            } 
+        if (optionalPageable.isEmpty()) {
+            return Page.<AuthorDTO>builder().content(authors).build();
         }
 
-        return fields;
-    }
-
-    private Page<AuthorDTO> toPage(List<AuthorDTO> authors, String name, Pageable pageable) {
+        var pageable = optionalPageable.get();
 
         int totalElements;
         
-        if (elementsCount.containsKey(name)) {
-            totalElements = elementsCount.get(name);
+        if (elementsCount.containsKey(condition)) {
+            totalElements = elementsCount.get(condition);
         } else {
-            totalElements = repository.count((Condition) AUTHORS.NAME.likeIgnoreCase("%" + name + "%"));
-            elementsCount.put(name, totalElements);
+            totalElements = repository.count(condition);
+            elementsCount.put(condition, totalElements);
         }
 
         int totalPages = totalElements / pageable.getPageSize();

@@ -1,6 +1,7 @@
 package com.mtrifonov.quarkus.project.endpoints;
 
 import java.net.URI;
+import java.util.Optional;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.resteasy.reactive.RestQuery;
@@ -37,7 +38,7 @@ public class AuthorResource {
     @GET
     @Path("/name")
     public Response getAuthorsWhereNameLike(@RestQuery String name, PageInformation information) {
-        return Response.ok(service.findAuthorsByName(name, information)).build();
+        return Response.ok(service.findAuthorsByName(name, Optional.of(information))).build();
     }
     
     @POST
