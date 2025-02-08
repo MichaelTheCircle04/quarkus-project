@@ -1,5 +1,6 @@
 package com.mtrifonov.quarkus.project.pagination;
 
+
 import org.jboss.resteasy.reactive.RestQuery;
 
 import jakarta.ws.rs.DefaultValue;
@@ -22,5 +23,9 @@ public class PageInformation {
     private Integer pageSize;
     @RestQuery
     @DefaultValue("unsorted")
-    private String[] sort;
+    private String sort;
+
+    public String[] getSort() {
+        return sort.replaceAll("\\s+","").split(",");
+    }
 }

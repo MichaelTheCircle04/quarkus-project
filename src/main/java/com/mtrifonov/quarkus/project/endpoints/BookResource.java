@@ -32,8 +32,7 @@ public class BookResource {
 	@GET
 	@Path("/{id}") //Covered
 	public Response getBookById(long id) {
-		var book = bookService.getBookById(id);
-		return Response.ok(book).build();
+		return Response.ok(bookService.getBookById(id)).build();
 	}
 
 	@GET
@@ -43,9 +42,11 @@ public class BookResource {
 	}
 
 	@GET
-	@Path("/title")
+	@Path("/title") //Covered
 	public Response getAllBooksByTitle(@RestQuery String title, PageInformation information) {
-		return Response.ok(bookService.findAllBooksWhereTitleLike(title, Optional.of(information))).build();
+		var result = bookService.findAllBooksWhereTitleLike(title, Optional.of(information));
+		System.out.println(result);
+		return Response.ok(result).build();
 	}
 
 	@GET
@@ -55,7 +56,7 @@ public class BookResource {
 	}
 
 	@GET
-	@Path("/author")
+	@Path("/author") //Covered
 	public Response getAllBooksByAuthorName (@RestQuery String name, PageInformation information) {
 		return Response.ok(bookService.findAllBooksByAuthorName(name, Optional.of(information))).build();
 	}

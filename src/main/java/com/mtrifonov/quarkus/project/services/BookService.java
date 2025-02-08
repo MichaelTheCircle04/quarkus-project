@@ -44,7 +44,7 @@ public class BookService {
 
 	public Page<BookDTO> findAllBooksWhereTitleLike(String title, Optional<PageInformation> information) {
 
-		var condition = Optional.of((Condition) BOOKS.TITLE.likeIgnoreCase(title));
+		var condition = Optional.of((Condition) BOOKS.TITLE.likeIgnoreCase("%" + title + "%"));
 		var pageable = Paginator.getPageable(information, BOOKS);
 		var content = bookRepo.findAll(condition, pageable);
 
@@ -109,8 +109,19 @@ public class BookService {
 			elementsCount.put(condition, totalElements);
 		}
 
-		int totalPages = (int) totalElements / pageable.getPageSize(); //Исходим из смелого предположения что страниц не будет больше Integer.MAX_VALUE
-		boolean nextPage = pageable.getPageNum() < totalPages;
+		int totalPages;
+		int remainder = (int) totalElements % pageable.getPageSize();
+
+		if (totalElements < pageable.getPageSize()) {
+			totalPages = 1;
+	  	} else if (remainder == 0) {
+			totalPages = (int) totalElements / pageable.getPageSize();
+		} else {
+			totalPages = (int) (totalElements - remainder) / pageable.getPageSize();
+			totalPages += 1;
+		}
+
+		boolean nextPage = pageable.getPageNum() < totalPages - 1;
 		boolean prevPage = pageable.getPageNum() > 0;
 
 		return Page.<BookDTO>builder()

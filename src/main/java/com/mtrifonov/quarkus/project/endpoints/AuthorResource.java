@@ -30,26 +30,26 @@ public class AuthorResource {
     }
 
     @GET
-    @Path("/{id}")
+    @Path("/{id}") //Covered
     public Response getAuthorById(int id) {
         return Response.ok(service.findAuthorById(id)).build();
     }
     
     @GET
-    @Path("/name")
+    @Path("/name") //Covered
     public Response getAuthorsWhereNameLike(@RestQuery String name, PageInformation information) {
         return Response.ok(service.findAuthorsByName(name, Optional.of(information))).build();
     }
     
     @POST
-    @Path("/create")
+    @Path("/create") //Covered
     public Response createAuthor(AuthorDTO author) {
         var result = service.createAuthor(author);
         return Response.created(URI.create("http://" + address + "/authors/" + result.getAuthorId())).build();
     }
 
     @DELETE
-    @Path("/delete/{id}")
+    @Path("/delete/{id}") //Covered
     public Response deleteAuthor(int id) {
         service.deleteAuthorById(id);
         return Response.ok().build();

@@ -28,12 +28,12 @@ public class Paginator {
     private static List<SortField<?>> prepareFields(String[] sort, TableImpl<?> table) {
         
         List<SortField<?>> fields = new ArrayList<>();
-
+        
         if (sort.length == 1) {
             return fields;
         } 
-
-        if (sort[sort.length - 1] == "asc") {
+        
+        if (sort[sort.length - 1].equals("asc")) {
             for (int i = 0; i < sort.length - 1; i++) {
                 fields.add(table.field(sort[i]).asc());
             }

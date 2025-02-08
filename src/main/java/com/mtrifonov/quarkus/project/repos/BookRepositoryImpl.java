@@ -114,7 +114,7 @@ public class BookRepositoryImpl implements BookRepository {
 	}
 
 	private List<BookDTO> findAll(Pageable pageable) {
-
+		System.out.println(pageable.getSort());
 		if (pageable.getSort().isEmpty()) {
 
 			return create

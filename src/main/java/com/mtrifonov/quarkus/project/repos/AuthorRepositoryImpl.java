@@ -2,14 +2,11 @@ package com.mtrifonov.quarkus.project.repos;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.jooq.Condition;
 import org.jooq.DSLContext;
-import org.jooq.SortField;
 
 import static com.mtrifonov.jooq.generated.Tables.*;
-import com.mtrifonov.jooq.generated.tables.records.AuthorsRecord;
 import com.mtrifonov.quarkus.project.dto.AuthorDTO;
 import com.mtrifonov.quarkus.project.pagination.Pageable;
 

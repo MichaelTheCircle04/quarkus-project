@@ -68,8 +68,19 @@ public class AuthorService {
             elementsCount.put(condition, totalElements);
         }
 
-        int totalPages = totalElements / pageable.getPageSize();
-        boolean nextPage = pageable.getPageNum() < totalPages;
+        int totalPages;
+		int remainder = totalElements % pageable.getPageSize();
+
+		if (totalElements < pageable.getPageSize()) {
+			totalPages = 1;
+	  	} else if (remainder == 0) {
+			totalPages = totalElements / pageable.getPageSize();
+		} else {
+			totalPages = (totalElements - remainder) / pageable.getPageSize();
+			totalPages += 1;
+		}
+
+        boolean nextPage = pageable.getPageNum() < totalPages - 1;
         boolean prevPage = pageable.getPageNum() > 0;
 
         return Page.<AuthorDTO>builder()

@@ -3,27 +3,17 @@ package com.mtrifonov;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.CoreMatchers.is;
 //import static org.hamcrest.CoreMatchers.*;
-//import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.hamcrest.text.MatchesPattern.*;
 
 import org.junit.jupiter.api.Test;
 
+import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 
 @QuarkusTest
 public class AuthorResourceTest {
-
-    @Test
-    void testAuthorEndpointPostRequest() {
-
-        given().contentType(ContentType.JSON)
-            .body("{\"name\": \"Федор Достоевский\"}")
-                .when().post("/authors/create")
-                    .then()
-                        .statusCode(201)
-                        .header("location", matchesPattern("^(https?:\\/\\/[a-zA-Z0-9.-]+(:\\d+)?\\/authors\\/\\d+)$"));;
-    }
 
     @Test
     void testAuthorEndpointGetRequest() {
@@ -36,20 +26,35 @@ public class AuthorResourceTest {
     }
 
     @Test
-    void testAuthorEndpointGetPageRequest() {
+    void testAuthorEndpointGetByName() {
 
         var response = given()
             .param("pageNum", 0)
             .param("pageSize", 1)
-            .param("sort", "author_id, asc")
+            .param("sort", "author_id, name, asc")
             .param("name", "гай")
                 .when().get("/authors/name")
                     .then()
                         .statusCode(200)
                         .extract().response();
 
-        //assertTrue(response.jsonPath().getInt("authorId[0]") == 1);
-        //assertTrue(response.jsonPath().getInt("authorId[1]") == 2);
+        assertTrue(response.jsonPath().getString("content[0].name").equals("Гайто Газданов"));
+        assertTrue(response.jsonPath().getInt("totalPages") == 2);
+        assertTrue(response.jsonPath().getInt("totalElements") == 2);
+        assertTrue(response.jsonPath().getBoolean("nextPage") == true);
+        assertTrue(response.jsonPath().getBoolean("prevPage") == false);
+    }
+
+    @Test
+    @TestTransaction
+    void testAuthorEndpointPostRequest() {
+
+        given().contentType(ContentType.JSON)
+            .body("{\"name\": \"Федор Достоевский\"}")
+                .when().post("/authors/create")
+                    .then()
+                        .statusCode(201)
+                        .header("location", matchesPattern("^(https?:\\/\\/[a-zA-Z0-9.-]+(:\\d+)?\\/authors\\/\\d+)$"));;
     }
 
     @Test
