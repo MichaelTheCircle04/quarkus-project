@@ -35,7 +35,7 @@ public class BookRepositoryImpl implements BookRepository {
 	}
 
 	@Override
-	public List<BookDTO> findAll(Optional<Condition> conditionOpt, Optional<Pageable> pageableOpt) {
+	public List<BookDTO> findAll(Optional<? extends Condition> conditionOpt, Optional<Pageable> pageableOpt) {
 
 		if (conditionOpt.isEmpty() && pageableOpt.isEmpty()) {
 			return findAll();
@@ -92,7 +92,7 @@ public class BookRepositoryImpl implements BookRepository {
 	}
 
 	@Override 
-	public long count(Optional<Condition> condition) { //Ok
+	public long count(Optional<? extends Condition> condition) { //Ok
 
 		if (condition.isEmpty()) {
 			return countAll();

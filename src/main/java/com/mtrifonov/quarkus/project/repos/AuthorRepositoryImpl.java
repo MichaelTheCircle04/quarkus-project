@@ -22,7 +22,7 @@ public class AuthorRepositoryImpl implements AuthorRepository {
     }
 
     @Override
-    public List<AuthorDTO> findAll(Optional<Condition> conditionOpt, Optional<Pageable> pageableOpt) {
+    public List<AuthorDTO> findAll(Optional<? extends Condition> conditionOpt, Optional<Pageable> pageableOpt) {
        
         if (conditionOpt.isEmpty() && pageableOpt.isEmpty()) {
             return findAll();
@@ -81,7 +81,7 @@ public class AuthorRepositoryImpl implements AuthorRepository {
     }
 
     @Override
-    public int count(Optional<Condition> condition) {
+    public int count(Optional<? extends Condition> condition) {
         
         if (condition.isEmpty()) {
             return countAll();

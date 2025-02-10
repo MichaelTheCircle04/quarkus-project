@@ -25,6 +25,49 @@ public class Paginator {
             .build());
     }
 
+    public static int getTotalPages(Number totalElements, Pageable pageable) {
+
+        if (totalElements instanceof Integer) {
+            return getTotalPagesIfInt((int) totalElements, pageable);
+        } else {
+            return getTotalPagesIfLong((long) totalElements, pageable);
+        }
+    }
+
+    private static int getTotalPagesIfInt(int totalElements, Pageable pageable) {
+
+        int totalPages;
+		int remainder = totalElements % pageable.getPageSize();
+
+		if (totalElements < pageable.getPageSize()) {
+			totalPages = 1;
+	  	} else if (remainder == 0) {
+			totalPages = totalElements / pageable.getPageSize();
+		} else {
+			totalPages = (totalElements - remainder) / pageable.getPageSize();
+			totalPages += 1;
+		}
+
+        return totalPages;
+    }
+
+    private static int getTotalPagesIfLong(long totalElements, Pageable pageable) {
+
+        int totalPages;
+		int remainder = (int) totalElements % pageable.getPageSize();
+
+		if (totalElements < pageable.getPageSize()) {
+			totalPages = 1;
+	  	} else if (remainder == 0) {
+			totalPages = (int) totalElements / pageable.getPageSize();
+		} else {
+			totalPages = (int) (totalElements - remainder) / pageable.getPageSize();
+			totalPages += 1;
+		}
+
+        return totalPages;
+    }
+
     private static List<SortField<?>> prepareFields(String[] sort, TableImpl<?> table) {
         
         List<SortField<?>> fields = new ArrayList<>();

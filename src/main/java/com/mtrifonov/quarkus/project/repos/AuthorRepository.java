@@ -9,9 +9,9 @@ import com.mtrifonov.quarkus.project.dto.AuthorDTO;
 import com.mtrifonov.quarkus.project.pagination.Pageable;
 
 public interface AuthorRepository {
-    List<AuthorDTO> findAll(Optional<Condition> condition, Optional<Pageable> pageable); //condition and pageable can be empty
+    List<AuthorDTO> findAll(Optional<? extends Condition> condition, Optional<Pageable> pageable); //condition and pageable can be empty
     AuthorDTO findById(int id);
     AuthorDTO save(AuthorDTO author);
     void deleteById(int id);
-    int count(Optional<Condition> condition);
+    int count(Optional<? extends Condition> condition);
 }

@@ -22,7 +22,7 @@ import jakarta.inject.Singleton;
 public class AuthorService {
 
     private final AuthorRepository repository;
-    private final Map<Optional<Condition>, Integer> elementsCount = new HashMap<>();
+    private final Map<Optional<? extends Condition>, Integer> elementsCount = new HashMap<>();
 
     public AuthorService(AuthorRepository repository) {
         this.repository = repository;
@@ -30,7 +30,7 @@ public class AuthorService {
 
     public Page<AuthorDTO> findAuthorsByName(String name, Optional<PageInformation> information) {
       
-        var condition = Optional.of((Condition) AUTHORS.NAME.likeIgnoreCase("%" + name + "%"));
+        var condition = Optional.of(AUTHORS.NAME.likeIgnoreCase("%" + name + "%"));
         var pageable = Paginator.getPageable(information, AUTHORS);
         var authors = repository.findAll(condition, pageable);
 
@@ -51,7 +51,7 @@ public class AuthorService {
         repository.deleteById(id);
     }
 
-    private Page<AuthorDTO> toPage(List<AuthorDTO> authors, Optional<Condition> condition, Optional<Pageable> optionalPageable) {
+    private Page<AuthorDTO> toPage(List<AuthorDTO> authors, Optional<? extends Condition> condition, Optional<Pageable> optionalPageable) {
 
         if (optionalPageable.isEmpty()) {
             return Page.<AuthorDTO>builder().content(authors).build();

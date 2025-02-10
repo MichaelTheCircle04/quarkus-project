@@ -23,7 +23,7 @@ public class BookService {
 	
 	private final BookRepository bookRepo;
 	private final AuthorService authorService;
-	private final Map<Optional<Condition>, Long> elementsCount = new HashMap<>();
+	private final Map<Optional<? extends Condition>, Long> elementsCount = new HashMap<>();
 	
 	public BookService(BookRepository bookRepo, AuthorService authorService) {
 		this.bookRepo = bookRepo;
@@ -54,7 +54,7 @@ public class BookService {
 	
 	public Page<BookDTO> findAllBooksByAuthorId(int id, Optional<PageInformation> information) {
 		
-		var condition = Optional.of((Condition) BOOKS.AUTHOR_ID.eq(id));
+		var condition = Optional.of(BOOKS.AUTHOR_ID.eq(id));
 		var pageable = Paginator.getPageable(information, BOOKS);
 		var content = bookRepo.findAll(condition, pageable);
 		
@@ -70,7 +70,7 @@ public class BookService {
 			.map(a -> a.getAuthorId())
 			.toList();
 
-		var condition = Optional.of((Condition) BOOKS.AUTHOR_ID.in(authorsIds));
+		var condition = Optional.of(BOOKS.AUTHOR_ID.in(authorsIds));
 		var pageable = Paginator.getPageable(information, BOOKS);
 		var content = bookRepo.findAll(condition, pageable);
 		
@@ -93,7 +93,7 @@ public class BookService {
 		bookRepo.deleteById(id);
 	}
 
-	private Page<BookDTO> toPage (List<BookDTO> books, Optional<Condition> condition, Optional<Pageable> optionalPageable) {
+	private Page<BookDTO> toPage (List<BookDTO> books, Optional<? extends Condition> condition, Optional<Pageable> optionalPageable) {
 
 		if (optionalPageable.isEmpty()) {
 			return Page.<BookDTO>builder().content(books).build();
