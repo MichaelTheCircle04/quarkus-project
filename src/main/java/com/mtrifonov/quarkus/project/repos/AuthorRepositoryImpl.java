@@ -23,35 +23,27 @@ public class AuthorRepositoryImpl implements AuthorRepository {
 
     @Override
     public List<AuthorDTO> findAll(Optional<? extends Condition> conditionOpt, Optional<Pageable> pageableOpt) {
-       
-        if (conditionOpt.isEmpty() && pageableOpt.isEmpty()) {
-            return findAll();
-        } else if (conditionOpt.isEmpty() && pageableOpt.isPresent()) {
-            return findAll(pageableOpt.get());
-        } else if (conditionOpt.isPresent() && pageableOpt.isEmpty()) {
-            return findAll(conditionOpt.get());
-        } 
-
-        var condition = conditionOpt.get();
-        var pageable = pageableOpt.get();
-
-        if (pageable.getSort().isEmpty()) {
-            
-            return create
-                .selectFrom(AUTHORS)
-                .where(condition)
-                .limit(pageable.getPageSize())
-                .offset(pageable.getPageSize() * pageable.getPageNum())
-                .fetchInto(AuthorDTO.class);
+        
+        var select = create.selectFrom(AUTHORS);
+        
+        if (!conditionOpt.isEmpty()) {
+        	select.where(conditionOpt.get());
         }
-            
-        return create
-            .selectFrom(AUTHORS)
-            .where(condition)
-            .orderBy(pageable.getSort())
-            .limit(pageable.getPageSize())
-            .offset(pageable.getPageSize() * pageable.getPageNum())
-            .fetchInto(AuthorDTO.class);
+        
+        if (pageableOpt.isEmpty()) {
+        	return select.fetchInto(AuthorDTO.class);
+        }
+        
+        var pageable = pageableOpt.get();
+        
+        if (!pageable.getSort().isEmpty()) {
+            select.orderBy(pageable.getSort());
+        }
+        
+        return select
+        		.limit(pageable.getPageSize())
+        		.offset(pageable.getPageSize() * pageable.getPageNum())
+        		.fetchInto(AuthorDTO.class);
         }
     
     @Override
@@ -83,55 +75,12 @@ public class AuthorRepositoryImpl implements AuthorRepository {
     @Override
     public int count(Optional<? extends Condition> condition) {
         
-        if (condition.isEmpty()) {
-            return countAll();
+    	var select = create.selectCount().from(AUTHORS);
+    	
+        if (!condition.isEmpty()) {
+            select.where(condition.get());
         }
 
-        return create
-            .selectCount()
-            .from(AUTHORS)
-            .where(condition.get())
-            .fetchOne().value1();
-    }
-
-    private List<AuthorDTO> findAll() {
-
-        return create
-            .selectFrom(AUTHORS)
-            .fetchInto(AuthorDTO.class);
-    }
-    
-    private List<AuthorDTO> findAll(Condition condition) {
-    
-        return create
-            .selectFrom(AUTHORS)
-            .where(condition)
-            .fetchInto(AuthorDTO.class);
-    }
-
-    private List<AuthorDTO> findAll(Pageable pageable) {
-
-        if (pageable.getSort().isEmpty()) {
-            return create
-                .selectFrom(AUTHORS)
-                .limit(pageable.getPageSize())
-                .offset(pageable.getPageSize() * pageable.getPageNum())
-                .fetchInto(AuthorDTO.class);
-        }
-
-        return create
-            .selectFrom(AUTHORS)
-            .orderBy(pageable.getSort())
-            .limit(pageable.getPageSize())
-            .offset(pageable.getPageSize() * pageable.getPageNum())
-            .fetchInto(AuthorDTO.class);
-    }
-
-    private int countAll() {
-
-        return create.
-            selectOne()
-            .from(AUTHORS)
-            .fetchOne().value1();
+        return select.fetchOne().value1();
     }
 }
