@@ -2,7 +2,6 @@ package com.mtrifonov.quarkus.project.repos;
 
 import org.jooq.Condition;
 import org.jooq.DSLContext;
-import org.jooq.Select;
 
 import static com.mtrifonov.jooq.generated.Tables.*;
 
@@ -50,7 +49,7 @@ public class BookRepositoryImpl implements BookRepository {
 		if (pageableOpt.isEmpty()) {
 			return select.fetchInto(BookDTO.class);
 		}
-		
+
 		var pageable = pageableOpt.get();
 
 		if (!pageable.getSort().isEmpty()) {
@@ -83,7 +82,7 @@ public class BookRepositoryImpl implements BookRepository {
 	}
 
 	@Override
-	public void deleteById(long id) { //Ok
+	public void deleteById(long id) { 
 		create.delete(BOOKS).where(BOOKS.BOOK_ID.eq(id)).execute();	
 	}
 

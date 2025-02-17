@@ -2,9 +2,7 @@ package com.mtrifonov.quarkus.project.services;
 
 import static com.mtrifonov.jooq.generated.Tables.AUTHORS;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import org.jooq.Condition;
@@ -22,10 +20,11 @@ import jakarta.inject.Singleton;
 public class AuthorService {
 
     private final AuthorRepository repository;
-    private final Map<Optional<? extends Condition>, Integer> elementsCount = new HashMap<>();
+    private final TotalElementsCacheService cacheService;
 
-    public AuthorService(AuthorRepository repository) {
+    public AuthorService(AuthorRepository repository, TotalElementsCacheService cacheService) {
         this.repository = repository;
+        this.cacheService = cacheService;
     }
 
     public Page<AuthorDTO> findAuthorsByName(String name, Optional<PageInformation> information) {
@@ -44,11 +43,14 @@ public class AuthorService {
 
     
     public AuthorDTO createAuthor(AuthorDTO author) {
-        return repository.save(author);
+        var result = repository.save(author);
+        cacheService.recalculateCachedTotalElements(AUTHORS);
+        return result;
     } 
 
     public void deleteAuthorById(int id) {
         repository.deleteById(id);
+        cacheService.recalculateCachedTotalElements(AUTHORS);
     }
 
     private Page<AuthorDTO> toPage(List<AuthorDTO> authors, Optional<? extends Condition> condition, Optional<Pageable> optionalPageable) {
@@ -59,27 +61,8 @@ public class AuthorService {
 
         var pageable = optionalPageable.get();
 
-        int totalElements;
-        
-        if (elementsCount.containsKey(condition)) {
-            totalElements = elementsCount.get(condition);
-        } else {
-            totalElements = repository.count(condition);
-            elementsCount.put(condition, totalElements);
-        }
-
-        int totalPages;
-		int remainder = totalElements % pageable.getPageSize();
-
-		if (totalElements < pageable.getPageSize()) {
-			totalPages = 1;
-	  	} else if (remainder == 0) {
-			totalPages = totalElements / pageable.getPageSize();
-		} else {
-			totalPages = (totalElements - remainder) / pageable.getPageSize();
-			totalPages += 1;
-		}
-
+        int totalElements = (int) cacheService.getTotalElements(AUTHORS, condition);
+        int totalPages = Paginator.getTotalPages(totalElements, pageable);
         boolean nextPage = pageable.getPageNum() < totalPages - 1;
         boolean prevPage = pageable.getPageNum() > 0;
 

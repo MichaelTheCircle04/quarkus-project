@@ -2,9 +2,7 @@ package com.mtrifonov.quarkus.project.services;
 
 import static com.mtrifonov.jooq.generated.Tables.BOOKS;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import org.jooq.Condition;
@@ -23,11 +21,12 @@ public class BookService {
 	
 	private final BookRepository bookRepo;
 	private final AuthorService authorService;
-	private final Map<Optional<? extends Condition>, Long> elementsCount = new HashMap<>();
+	private final TotalElementsCacheService cacheService;
 	
-	public BookService(BookRepository bookRepo, AuthorService authorService) {
+	public BookService(BookRepository bookRepo, AuthorService authorService, TotalElementsCacheService cacheService) {
 		this.bookRepo = bookRepo;
 		this.authorService = authorService;
+		this.cacheService = cacheService;
 	}
 	
 	public BookDTO getBookById(long id) {
@@ -44,7 +43,7 @@ public class BookService {
 
 	public Page<BookDTO> findAllBooksWhereTitleLike(String title, Optional<PageInformation> information) {
 
-		var condition = Optional.of((Condition) BOOKS.TITLE.likeIgnoreCase("%" + title + "%"));
+		var condition = Optional.of(BOOKS.TITLE.likeIgnoreCase("%" + title + "%"));
 		var pageable = Paginator.getPageable(information, BOOKS);
 		var content = bookRepo.findAll(condition, pageable);
 
@@ -78,19 +77,24 @@ public class BookService {
 	}
 	
 	public BookDTO createBook(BookDTO book) {
-		return bookRepo.save(book);
+		var result = bookRepo.save(book);
+		cacheService.recalculateCachedTotalElements(BOOKS);
+		return result;
 	}
 	
 	public void setPriceById(long id, int price) {
 		bookRepo.setPriceById(id, price);
+		cacheService.recalculateCachedTotalElements(BOOKS);
 	}
 	
 	public void setAmountById(long id, int amount) {
 		bookRepo.setAmountById(id, amount);
+		cacheService.recalculateCachedTotalElements(BOOKS);
 	}
 
 	public void deleteById(long id) {
 		bookRepo.deleteById(id);
+		cacheService.recalculateCachedTotalElements(BOOKS);
 	}
 
 	private Page<BookDTO> toPage (List<BookDTO> books, Optional<? extends Condition> condition, Optional<Pageable> optionalPageable) {
@@ -100,27 +104,9 @@ public class BookService {
 		}
 
 		var pageable = optionalPageable.get();
-		long totalElements;
 
-		if (elementsCount.containsKey(condition)) {
-			totalElements = elementsCount.get(condition);
-		} else {
-			totalElements = bookRepo.count(condition);
-			elementsCount.put(condition, totalElements);
-		}
-
-		int totalPages;
-		int remainder = (int) totalElements % pageable.getPageSize();
-
-		if (totalElements < pageable.getPageSize()) {
-			totalPages = 1;
-	  	} else if (remainder == 0) {
-			totalPages = (int) totalElements / pageable.getPageSize();
-		} else {
-			totalPages = (int) (totalElements - remainder) / pageable.getPageSize();
-			totalPages += 1;
-		}
-
+		long totalElements = (long) cacheService.getTotalElements(BOOKS, condition);
+		int totalPages = Paginator.getTotalPages(totalElements, pageable);
 		boolean nextPage = pageable.getPageNum() < totalPages - 1;
 		boolean prevPage = pageable.getPageNum() > 0;
 
