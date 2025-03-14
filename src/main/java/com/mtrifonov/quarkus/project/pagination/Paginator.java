@@ -3,13 +3,12 @@ package com.mtrifonov.quarkus.project.pagination;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
 import org.jooq.SortField;
-import org.jooq.impl.TableImpl;
+import org.jooq.TableLike;
 
 public class Paginator {
 
-    public static Optional<Pageable> getPageable(Optional<PageInformation> optInf, TableImpl<?> table) {
+    public static Optional<Pageable> getPageable(Optional<PageInformation> optInf, TableLike<?> table) {
 
         if (optInf.isEmpty()) {
             return Optional.empty();
@@ -68,7 +67,7 @@ public class Paginator {
         return totalPages;
     }
 
-    private static List<SortField<?>> prepareFields(String[] sort, TableImpl<?> table) {
+    private static List<SortField<?>> prepareFields(String[] sort, TableLike<?> table) {
         
         List<SortField<?>> fields = new ArrayList<>();
         

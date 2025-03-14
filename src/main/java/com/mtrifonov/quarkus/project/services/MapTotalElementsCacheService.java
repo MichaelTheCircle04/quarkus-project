@@ -9,6 +9,7 @@ import java.util.Optional;
 
 import org.jooq.Condition;
 import org.jooq.Table;
+import org.jooq.TableLike;
 
 import com.mtrifonov.quarkus.project.repos.AuthorRepository;
 import com.mtrifonov.quarkus.project.repos.BookRepository;
@@ -31,10 +32,10 @@ public class MapTotalElementsCacheService implements TotalElementsCacheService {
     }
     
     @Override
-    public Number getTotalElements(Table<?> table, Optional<? extends Condition> condition) {
+    public Number getTotalElements(Table<?> table, Optional<? extends TableLike<?>> join, Optional<? extends Condition> condition) {
         
         if (table == AUTHORS) {
-            return getTotalElementsFromAuthors(condition);
+            return getTotalElementsFromAuthors(join, condition);
         } else if (table == BOOKS) {
             return getTotalElementsFromBooks(condition);
         } else {
@@ -44,22 +45,22 @@ public class MapTotalElementsCacheService implements TotalElementsCacheService {
 
     
     @Override
-    public void recalculateCachedTotalElements(Table<?> table) {
+    public void cleanCachedTotalElements(Table<?> table) {
         if (table == AUTHORS) {
-            recalculateAuthorsCachedTotalElements();
+            cleanAuthorsCachedTotalElements();
         } else if (table == BOOKS) {
-            recalculateBooksCachedTotalElements();
+            cleanBooksCachedTotalElements();
         } else {
             throw new IllegalArgumentException();
         }
     }
 
-    private Integer getTotalElementsFromAuthors(Optional<? extends Condition> condition) {
+    private Integer getTotalElementsFromAuthors(Optional<? extends TableLike<?>> join, Optional<? extends Condition> condition) {
 
         Integer total = authorsMap.get(condition);
 
         if (total == null) {
-            total = authorsRepo.count(condition);
+            total = authorsRepo.count(join, condition);
             authorsMap.put(condition, total);
         }
 
@@ -78,17 +79,11 @@ public class MapTotalElementsCacheService implements TotalElementsCacheService {
         return total;
     }
 
-    private void recalculateAuthorsCachedTotalElements() {
-        
-        for (var entry : authorsMap.entrySet()) {
-            entry.setValue(authorsRepo.count(entry.getKey()));
-        }
+    private void cleanAuthorsCachedTotalElements() {
+        authorsMap.clear();
     }
 
-    private void recalculateBooksCachedTotalElements() {
-
-        for (var entry : booksMap.entrySet()) {
-            entry.setValue(booksRepo.count(entry.getKey()));
-        }
+    private void cleanBooksCachedTotalElements() {
+        booksMap.clear();
     }
 }

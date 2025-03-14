@@ -2,6 +2,7 @@ package com.mtrifonov.quarkus.project.repos;
 
 import org.jooq.Condition;
 import org.jooq.DSLContext;
+import org.jooq.TableLike;
 
 import static com.mtrifonov.jooq.generated.Tables.*;
 
@@ -25,25 +26,15 @@ public class BookRepositoryImpl implements BookRepository {
 	}
 
 	@Override
-	public BookDTO findById(long id) { 
-
-		return create
-			.select(BOOKS.BOOK_ID, BOOKS.TITLE, BOOKS.PRICE, BOOKS.AMOUNT, BOOKS.AUTHOR_ID, AUTHORS.NAME)
-			.from(BOOKS).join(AUTHORS).on(BOOKS.AUTHOR_ID.eq(AUTHORS.AUTHOR_ID))
-			.where(BOOKS.BOOK_ID.eq(id))
-			.fetchOneInto(BookDTO.class);		
-	}
-
-	@Override
-	public List<BookDTO> findAll(Optional<? extends Condition> conditionOpt, Optional<Pageable> pageableOpt) {
+	public List<BookDTO> findAll(Optional<? extends Condition> cond, Optional<Pageable> pageableOpt) {
 
 		var select = create
 				.select(BOOKS.BOOK_ID, BOOKS.TITLE, BOOKS.PRICE, BOOKS.AMOUNT, BOOKS.AUTHOR_ID, AUTHORS.NAME)
 				.from(BOOKS)
 				.join(AUTHORS).on(BOOKS.AUTHOR_ID.eq(AUTHORS.AUTHOR_ID));
-		
-		if (!conditionOpt.isEmpty()) {
-			select.where(conditionOpt.get());
+
+		if (!cond.isEmpty()) {
+			select.where(cond.get());
 		}
 		
 		if (pageableOpt.isEmpty()) {
@@ -60,6 +51,16 @@ public class BookRepositoryImpl implements BookRepository {
 			.limit(pageable.getPageSize())
 			.offset(pageable.getPageNum() * pageable.getPageSize())
 			.fetchInto(BookDTO.class);
+	}
+
+	@Override
+	public BookDTO findById(long id) { 
+
+		return create
+			.select(BOOKS.BOOK_ID, BOOKS.TITLE, BOOKS.PRICE, BOOKS.AMOUNT, BOOKS.AUTHOR_ID, AUTHORS.NAME)
+			.from(BOOKS).join(AUTHORS).on(BOOKS.AUTHOR_ID.eq(AUTHORS.AUTHOR_ID))
+			.where(BOOKS.BOOK_ID.eq(id))
+			.fetchOneInto(BookDTO.class);		
 	}
 
 	@Override
@@ -89,7 +90,11 @@ public class BookRepositoryImpl implements BookRepository {
 	@Override 
 	public long count(Optional<? extends Condition> condition) {
 		
-		var select = create.selectCount().from(BOOKS);
+		var select = create
+			.selectCount()
+			.from(BOOKS)
+			.join(AUTHORS).on(BOOKS.AUTHOR_ID.eq(AUTHORS.AUTHOR_ID));
+
 
 		if (!condition.isEmpty()) {
 			select.where(condition.get());

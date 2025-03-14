@@ -2,10 +2,9 @@ package com.mtrifonov.quarkus.project.repos;
 
 import java.util.List;
 import java.util.Optional;
-
 import org.jooq.Condition;
 import org.jooq.DSLContext;
-
+import org.jooq.TableLike;
 import static com.mtrifonov.jooq.generated.Tables.*;
 import com.mtrifonov.quarkus.project.dto.AuthorDTO;
 import com.mtrifonov.quarkus.project.pagination.Pageable;
@@ -22,12 +21,18 @@ public class AuthorRepositoryImpl implements AuthorRepository {
     }
 
     @Override
-    public List<AuthorDTO> findAll(Optional<? extends Condition> conditionOpt, Optional<Pageable> pageableOpt) {
+    public List<AuthorDTO> findAll(Optional<? extends TableLike<?>> join, Optional<? extends Condition> cond, Optional<Pageable> pageableOpt) {
         
-        var select = create.selectFrom(AUTHORS);
+        var select = create.select(AUTHORS.AUTHOR_ID, AUTHORS.NAME);
         
-        if (!conditionOpt.isEmpty()) {
-        	select.where(conditionOpt.get());
+        if (!join.isEmpty()) {
+            select.from(join.get());
+        } else {
+            select.from(AUTHORS);
+        }
+
+        if (!cond.isEmpty()) {
+        	select.where(cond.get());
         }
         
         if (pageableOpt.isEmpty()) {
@@ -44,10 +49,12 @@ public class AuthorRepositoryImpl implements AuthorRepository {
         		.limit(pageable.getPageSize())
         		.offset(pageable.getPageSize() * pageable.getPageNum())
         		.fetchInto(AuthorDTO.class);
-        }
+    }
+    
     
     @Override
     public AuthorDTO findById(int id) {
+
         return create
             .selectFrom(AUTHORS)
             .where(AUTHORS.AUTHOR_ID.eq(id))
@@ -73,10 +80,16 @@ public class AuthorRepositoryImpl implements AuthorRepository {
     }
 
     @Override
-    public int count(Optional<? extends Condition> condition) {
+    public int count(Optional<? extends TableLike<?>> join, Optional<? extends Condition> condition) {
         
-    	var select = create.selectCount().from(AUTHORS);
+    	var select = create.selectCount();
     	
+        if (!join.isEmpty()) {
+            select.from(join.get());
+        } else {
+            select.from(AUTHORS);
+        }
+
         if (!condition.isEmpty()) {
             select.where(condition.get());
         }

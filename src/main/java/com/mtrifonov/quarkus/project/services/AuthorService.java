@@ -1,12 +1,10 @@
 package com.mtrifonov.quarkus.project.services;
 
-import static com.mtrifonov.jooq.generated.Tables.AUTHORS;
-
+import static com.mtrifonov.jooq.generated.Tables.*;
 import java.util.List;
 import java.util.Optional;
-
 import org.jooq.Condition;
-
+import org.jooq.TableLike;
 import com.mtrifonov.quarkus.project.dto.AuthorDTO;
 import com.mtrifonov.quarkus.project.pagination.Page;
 import com.mtrifonov.quarkus.project.pagination.PageInformation;
@@ -15,8 +13,10 @@ import com.mtrifonov.quarkus.project.pagination.Paginator;
 import com.mtrifonov.quarkus.project.repos.AuthorRepository;
 
 import jakarta.inject.Singleton;
+import jakarta.transaction.Transactional;
 
 @Singleton
+@Transactional
 public class AuthorService {
 
     private final AuthorRepository repository;
@@ -31,10 +31,20 @@ public class AuthorService {
       
         var condition = Optional.of(AUTHORS.NAME.likeIgnoreCase("%" + name + "%"));
         var pageable = Paginator.getPageable(information, AUTHORS);
-        var authors = repository.findAll(condition, pageable);
+        var authors = repository.findAll(Optional.empty(), condition, pageable);
 
-        return toPage(authors, condition, pageable);
+        return toPage(authors, Optional.empty(), condition, pageable);
     };
+
+    public Page<AuthorDTO> findAllAuthorsByBookTitle(String title, Optional<PageInformation> information) {
+
+        var join = Optional.of(AUTHORS.join(BOOKS).on(AUTHORS.AUTHOR_ID.eq(BOOKS.AUTHOR_ID)).asTable());
+        var condition = Optional.of(BOOKS.TITLE.likeIgnoreCase("%" + title + "%"));
+        var pageable = Paginator.getPageable(information, AUTHORS);
+        var authors = repository.findAll(join, condition, pageable);
+
+        return toPage(authors, join, condition, pageable);
+    }
 
     
     public AuthorDTO findAuthorById(int id) {
@@ -44,16 +54,20 @@ public class AuthorService {
     
     public AuthorDTO createAuthor(AuthorDTO author) {
         var result = repository.save(author);
-        cacheService.recalculateCachedTotalElements(AUTHORS);
+        cacheService.cleanCachedTotalElements(AUTHORS);
         return result;
     } 
 
     public void deleteAuthorById(int id) {
         repository.deleteById(id);
-        cacheService.recalculateCachedTotalElements(AUTHORS);
+        cacheService.cleanCachedTotalElements(AUTHORS);
     }
 
-    private Page<AuthorDTO> toPage(List<AuthorDTO> authors, Optional<? extends Condition> condition, Optional<Pageable> optionalPageable) {
+    private Page<AuthorDTO> toPage(
+        List<AuthorDTO> authors, 
+        Optional<? extends TableLike<?>> join, 
+        Optional<? extends Condition> condition, 
+        Optional<Pageable> optionalPageable) {
 
         if (optionalPageable.isEmpty()) {
             return Page.<AuthorDTO>builder().content(authors).build();
@@ -61,7 +75,7 @@ public class AuthorService {
 
         var pageable = optionalPageable.get();
 
-        int totalElements = (int) cacheService.getTotalElements(AUTHORS, condition);
+        int totalElements = (int) cacheService.getTotalElements(AUTHORS, join, condition);
         int totalPages = Paginator.getTotalPages(totalElements, pageable);
         boolean nextPage = pageable.getPageNum() < totalPages - 1;
         boolean prevPage = pageable.getPageNum() > 0;

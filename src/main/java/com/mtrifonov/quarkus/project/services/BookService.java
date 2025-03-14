@@ -1,5 +1,6 @@
 package com.mtrifonov.quarkus.project.services;
 
+import static com.mtrifonov.jooq.generated.Tables.AUTHORS;
 import static com.mtrifonov.jooq.generated.Tables.BOOKS;
 
 import java.util.List;
@@ -15,28 +16,28 @@ import com.mtrifonov.quarkus.project.pagination.Paginator;
 import com.mtrifonov.quarkus.project.repos.BookRepository;
 
 import jakarta.inject.Singleton;
+import jakarta.transaction.Transactional;
 
 @Singleton
+@Transactional
 public class BookService {
 	
-	private final BookRepository bookRepo;
-	private final AuthorService authorService;
+	private final BookRepository repository;
 	private final TotalElementsCacheService cacheService;
 	
-	public BookService(BookRepository bookRepo, AuthorService authorService, TotalElementsCacheService cacheService) {
-		this.bookRepo = bookRepo;
-		this.authorService = authorService;
+	public BookService(BookRepository repository, TotalElementsCacheService cacheService) {
+		this.repository = repository;
 		this.cacheService = cacheService;
 	}
 	
 	public BookDTO getBookById(long id) {
-		return bookRepo.findById(id);
+		return repository.findById(id);
 	}
 
     public Page<BookDTO> findAllBooks(Optional<PageInformation> information) {
 
 		var pageable = Paginator.getPageable(information, BOOKS);
-		var content = bookRepo.findAll(Optional.empty(), pageable);
+		var content = repository.findAll(Optional.empty(), pageable);
 
 		return toPage(content, Optional.empty(), pageable);
     }
@@ -45,7 +46,7 @@ public class BookService {
 
 		var condition = Optional.of(BOOKS.TITLE.likeIgnoreCase("%" + title + "%"));
 		var pageable = Paginator.getPageable(information, BOOKS);
-		var content = bookRepo.findAll(condition, pageable);
+		var content = repository.findAll(condition, pageable);
 
 		return toPage(content, condition, pageable);
 	}
@@ -55,7 +56,7 @@ public class BookService {
 		
 		var condition = Optional.of(BOOKS.AUTHOR_ID.eq(id));
 		var pageable = Paginator.getPageable(information, BOOKS);
-		var content = bookRepo.findAll(condition, pageable);
+		var content = repository.findAll(condition, pageable);
 		
 		return toPage(content, condition, pageable);
 	}
@@ -63,38 +64,33 @@ public class BookService {
 	
 	public Page<BookDTO> findAllBooksByAuthorName(String name, Optional<PageInformation> information) {
 
-		var authorsIds = authorService
-			.findAuthorsByName(name, Optional.empty())
-			.getContent().stream()
-			.map(a -> a.getAuthorId())
-			.toList();
-
-		var condition = Optional.of(BOOKS.AUTHOR_ID.in(authorsIds));
+		var condition = Optional.of(AUTHORS.NAME.likeIgnoreCase("%" + name + "%"));
 		var pageable = Paginator.getPageable(information, BOOKS);
-		var content = bookRepo.findAll(condition, pageable);
+		var content = repository.findAll(condition, pageable);
 		
 		return toPage(content, condition, pageable);
 	}
 	
+	//Колличество не важно для филтров которые будет использовать пользователь, но постоянно будет меняться, посему можно пренебречь в данном случае очисткой кэша
+	public void setAmountById(long id, int amount) {
+		repository.setAmountById(id, amount);
+	}
+
+	//Методы изменяющие дынные, после их применения кэш сбрасывается
 	public BookDTO createBook(BookDTO book) {
-		var result = bookRepo.save(book);
-		cacheService.recalculateCachedTotalElements(BOOKS);
+		var result = repository.save(book);
+		cacheService.cleanCachedTotalElements(BOOKS);
 		return result;
 	}
-	
+
 	public void setPriceById(long id, int price) {
-		bookRepo.setPriceById(id, price);
-		cacheService.recalculateCachedTotalElements(BOOKS);
-	}
-	
-	public void setAmountById(long id, int amount) {
-		bookRepo.setAmountById(id, amount);
-		cacheService.recalculateCachedTotalElements(BOOKS);
+		repository.setPriceById(id, price);
+		cacheService.cleanCachedTotalElements(BOOKS);
 	}
 
 	public void deleteById(long id) {
-		bookRepo.deleteById(id);
-		cacheService.recalculateCachedTotalElements(BOOKS);
+		repository.deleteById(id);
+		cacheService.cleanCachedTotalElements(BOOKS);
 	}
 
 	private Page<BookDTO> toPage (List<BookDTO> books, Optional<? extends Condition> condition, Optional<Pageable> optionalPageable) {
@@ -105,7 +101,7 @@ public class BookService {
 
 		var pageable = optionalPageable.get();
 
-		long totalElements = (long) cacheService.getTotalElements(BOOKS, condition);
+		long totalElements = (long) cacheService.getTotalElements(BOOKS, Optional.empty(), condition);
 		int totalPages = Paginator.getTotalPages(totalElements, pageable);
 		boolean nextPage = pageable.getPageNum() < totalPages - 1;
 		boolean prevPage = pageable.getPageNum() > 0;

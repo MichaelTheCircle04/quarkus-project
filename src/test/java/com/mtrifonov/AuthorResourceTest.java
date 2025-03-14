@@ -1,16 +1,14 @@
 package com.mtrifonov;
 
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.CoreMatchers.is;
-//import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.hamcrest.text.MatchesPattern.*;
-
 import org.junit.jupiter.api.Test;
-
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
+
 
 @QuarkusTest
 public class AuthorResourceTest {

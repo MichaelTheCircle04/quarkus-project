@@ -2,18 +2,14 @@ package com.mtrifonov.quarkus.project.services;
 
 import static com.mtrifonov.jooq.generated.Tables.AUTHORS;
 import static com.mtrifonov.jooq.generated.Tables.BOOKS;
-
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
 import org.jooq.Condition;
 import org.jooq.Table;
-import org.jooq.impl.DSL;
+import org.jooq.TableLike;
 
 import com.mtrifonov.quarkus.project.repos.AuthorRepository;
 import com.mtrifonov.quarkus.project.repos.BookRepository;
-
 import io.quarkus.arc.profile.IfBuildProfile;
 import io.quarkus.redis.datasource.RedisDataSource;
 import io.quarkus.redis.datasource.hash.HashCommands;
@@ -37,50 +33,50 @@ public class RedisTotalElementsCacheService implements TotalElementsCacheService
 
     //Public API methods
     @Override
-    public Number getTotalElements(Table<?> table, Optional<? extends Condition> condition) {
+    public Number getTotalElements(Table<?> table, Optional<? extends TableLike<?>> join, Optional<? extends Condition> condition) {
 
         if (table == AUTHORS) {
-            return getBooksTotalElements(condition);
+            return getAuthorsTotalElements(join, condition);
         } else if (table == BOOKS) {
-            return getAuthorsTotalElements(condition);
+            return getBooksTotalElements(condition); 
         } else {
             throw new IllegalArgumentException();
         }
     }
 
     @Override
-    public void recalculateCachedTotalElements(Table<?> table) {
+    public void cleanCachedTotalElements(Table<?> table) {
 
         if (table == AUTHORS) {
-            recalculateAuthorsCachedTotalElements();
+            cleanAuthorsCachedTotalElements();
         } else if (table == BOOKS) {
-            recalculateBooksCachedTotalElements();
+            cleanBooksCachedTotalElements();
         } else {
             throw new IllegalArgumentException();
         }
     }
 
+    //Cleaners
+    private void cleanAuthorsCachedTotalElements() {
+        authorsCommands.hdel("AUTHORS");
+    }
+
+    private void cleanBooksCachedTotalElements() {
+        authorsCommands.hdel("BOOKS");
+    }
+
     //Aggregators
-    private Integer getAuthorsTotalElements(Optional<? extends Condition> condition) {
+    private Integer getAuthorsTotalElements(Optional<? extends TableLike<?>> join, Optional<? extends Condition> condition) {
 
         Integer totalElements = getTotalElementsFromAuthors(condition);
 
         if (totalElements == null) {
-            totalElements = authorRepo.count(condition);
+            totalElements = authorRepo.count(join, condition);
             putTotalElementsToAuthors(condition, totalElements);
         }
 
         return totalElements;
     }
-
-    private void recalculateAuthorsCachedTotalElements() {
-
-        for (var condition : getAuthorsTableConditions()) {
-			var jooqCond = DSL.condition(condition);
-            putTotalElementsToAuthors(Optional.of(jooqCond), authorRepo.count(Optional.of(jooqCond)));
-        }
-    }
-
 
     private Long getBooksTotalElements(Optional<? extends Condition> condition) {
 
@@ -94,21 +90,9 @@ public class RedisTotalElementsCacheService implements TotalElementsCacheService
         return totalElements;
     }
 
-    private void recalculateBooksCachedTotalElements() {
-
-        for (var condition : getBooksTableConditions()) {
-			var jooqCond = DSL.condition(condition);
-            putTotalElementsToBooks(Optional.of(jooqCond), bookRepo.count(Optional.of(jooqCond)));
-        }
-    }
-
     //Main low-level methods
     private Integer getTotalElementsFromAuthors(Optional<? extends Condition> condition) {
         return authorsCommands.hget("AUTHORS", condition.isEmpty() ? "" : condition.get().toString());
-    }
-
-    private List<String> getAuthorsTableConditions() {
-        return authorsCommands.hkeys("AUTHORS");
     }
 
     private void putTotalElementsToAuthors(Optional<? extends Condition> condition, int newCount) {
@@ -118,10 +102,6 @@ public class RedisTotalElementsCacheService implements TotalElementsCacheService
 
     private Long getTotalElementsFromBooks(Optional<? extends Condition> condition) {
         return booksCommands.hget("BOOKS", condition.isEmpty() ? "" : condition.get().toString());
-    }
-
-    private List<String> getBooksTableConditions() {
-        return authorsCommands.hkeys("BOOKS");
     }
 
     private void putTotalElementsToBooks(Optional<? extends Condition> condition, long newCount) {
