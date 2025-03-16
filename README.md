@@ -1,67 +1,37 @@
 # quarkus-project
+### Цели:
+- На базовом уровне познакомиться с фреймворком Quarkus
+- Изучить механизм миграций баз данных Flyway
+- Изучить возможности инеграции Redis в проект на Quarkus
+- Получить практический опыт работы с JOOQ
 
-This project uses Quarkus, the Supersonic Subatomic Java Framework.
+### Концепция:
+На фронте должно быть две страницы, условно: все книги и все авторы. На странице с книгами можно попытаться вбить в строку поиска какое-то слово. Результатом будут
+все книги в которых либо название либо имя автора содержат в себе введенное слово. Кроме того существуют endpoint'ы для получения книги по id, всех
+книг по id автора и просто всех книг. На странице с авторами также можно использовать строку поиска обращение к которой вернет всех авторов имя которых 
+содержит введенное слово. Также существуют endpoint'ы для получения автора по id, получения всех авторов которые написали книги содержащие в название какое-то
+слово и просто всех авторов.
+Помимо прочего я решил самостоятельно написать примитивные классы для осуществления пагинации. Далее я дам краткое описание каждого. 
+Есть класс PageInformation, он содержит: номер страницы (по умолчанию 0), размер страницы (по умолчанию 0) и массив строк sort (по умолчанию ["unsorted"]), 
+массив строк состоит из названия полей, по которым должна осуществляться сорировка, а в конце указано направление (asc, desc). Я думал над тем, чтобы
+реализовать возможность выбора направления сорировки для каждого отдельного поля (условно ["title", "desc", "price", "asc"]), но отказался от этой идеи,
+в силу того что практическая польза от этого мне показалась сомнительной. Также есть класс Paginator который с помощью ряда статических методов
+принимая объект PageInformation возвращает объект класса Pageable. Этот класс в свою очередь используется в репозитории для осуществления пагинации
+единственное отличие его от PageInformation состоит в том, что вместо массива строк представляющего поля для сорировки он содержит объект класса List
+в котором хранятся экземпляры класса SortField необходимые для сортировки при использовании JOOQ. Далее, после того как выбираются необходимые данные 
+в сервисе из результата создается объект Page. Этот класс содержит в себе некоторую метаинформацию о странице, так то: ее размер, номер, наличие следующий страницы,
+наличие предыдующей, общее колличество страниц и элементов, а также сам контент. Информации о колличестве элементов получается при помощи объекта реализуюшего интерфейс
+TotalElementcCacheService. Этот класс позволяет по условию выборки получить закешериванное колличество элементов найденных в соответствии с этим условием. Если значение 
+этого условия не закешериванно, то оно вычисляется и добавляется в кеш. Если вносятся изменения в таблицу, то кеш сбрасывается. В силу того, что внесение изменения в 
+отдельную таблицу может оказать влияние на неограниченное и заранее неизвестное колличество условий кеш всегда сбрасывается. Это может ставить под сомнение в целом
+целесообразность наличия кеша как такового, но в силу того, что конкретно в данном сервисе колличетство операций чтения из базы по моему рассчету должно значительно превышать
+количество операций изменения, я все-таки решил что оставить кеш имеет смысл.
 
-If you want to learn more about Quarkus, please visit its website: <https://quarkus.io/>.
-
-## Running the application in dev mode
-
-You can run your application in dev mode that enables live coding using:
-
-```shell script
-./mvnw quarkus:dev
-```
-
-> **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
-
-## Packaging and running the application
-
-The application can be packaged using:
-
-```shell script
-./mvnw package
-```
-
-It produces the `quarkus-run.jar` file in the `target/quarkus-app/` directory.
-Be aware that it’s not an _über-jar_ as the dependencies are copied into the `target/quarkus-app/lib/` directory.
-
-The application is now runnable using `java -jar target/quarkus-app/quarkus-run.jar`.
-
-If you want to build an _über-jar_, execute the following command:
-
-```shell script
-./mvnw package -Dquarkus.package.jar.type=uber-jar
-```
-
-The application, packaged as an _über-jar_, is now runnable using `java -jar target/*-runner.jar`.
-
-## Creating a native executable
-
-You can create a native executable using:
-
-```shell script
-./mvnw package -Dnative
-```
-
-Or, if you don't have GraalVM installed, you can run the native executable build in a container using:
-
-```shell script
-./mvnw package -Dnative -Dquarkus.native.container-build=true
-```
-
-You can then execute your native executable with: `./target/quarkus-study-1.0.0-SNAPSHOT-runner`
-
-If you want to learn more about building native executables, please consult <https://quarkus.io/guides/maven-tooling>.
-
-## Related Guides
-
-- Hibernate Validator ([guide](https://quarkus.io/guides/validation)): Validate object properties (field, getter) and method parameters for your beans (REST, CDI, Jakarta Persistence)
-- REST Jackson ([guide](https://quarkus.io/guides/rest#json-serialisation)): Jackson serialization support for Quarkus REST. This extension is not compatible with the quarkus-resteasy extension, or any of the extensions that depend on it
-
-## Provided Code
-
-### REST
-
-Easily start your REST Web Services
-
-[Related guide section...](https://quarkus.io/guides/getting-started-reactive#reactive-jax-rs-resources)
+### Компоненты:
+- DTO-шки
+- BaseExceptionHandler - обработчик ошибок, я написал его для того чтобы вывести более
+подробную информацию о некоторых возникающих в процессе обработки запроса ошибках
+- ***Resource - endpoint'ы в которых определен mapping и обработка пользовательских запросов
+- ***Service - сервисы в которых подготавливается запрос к базе, а потом формируется объект Page
+- Paginator - подготавливает объекты Pageable 
+- ***Repository - объекты для доступа к базе
