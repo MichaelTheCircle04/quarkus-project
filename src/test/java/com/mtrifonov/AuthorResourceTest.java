@@ -24,6 +24,16 @@ public class AuthorResourceTest {
     }
 
     @Test
+    void testAuthorEndpointGetRequestInvalidId() {
+
+        given()
+            .when().get("authors/4")
+                .then()
+                    .statusCode(404)
+                    .body(containsString("couldn't find author with id: 4"));
+    }
+
+    @Test
     void testAuthorEndpointGetByName() {
 
         var response = given()
@@ -43,6 +53,20 @@ public class AuthorResourceTest {
         assertTrue(response.jsonPath().getBoolean("prevPage") == false);
     }
 
+
+    @Test
+    void testAuthorEndpointGetByTitle() {
+
+        given()
+            .param("pageNum", 0)
+            .param("pageSize", 1)
+            .param("title", "вечер")
+                .when().get("/authors/title")
+                    .then()
+                        .statusCode(200)
+                        .body("content[0].name", is("Гайто Газданов"));
+    }
+
     @Test
     @TestTransaction
     void testAuthorEndpointPostRequest() {
@@ -52,7 +76,18 @@ public class AuthorResourceTest {
                 .when().post("/authors/create")
                     .then()
                         .statusCode(201)
-                        .header("location", matchesPattern("^(https?:\\/\\/[a-zA-Z0-9.-]+(:\\d+)?\\/authors\\/\\d+)$"));;
+                        .header("location", matchesPattern("^(https?:\\/\\/[a-zA-Z0-9.-]+(:\\d+)?\\/authors\\/\\d+)$"));
+    }
+
+    @Test
+    @TestTransaction
+    void testAuthorEndpointPostRequestInvalidBody() {
+
+        given().contentType(ContentType.JSON)
+            .body("{\"nname\": \"Федор Достоевский\"}")
+                .when().post("/authors/create")
+                    .then()
+                        .statusCode(400).extract().response();
     }
 
     @Test

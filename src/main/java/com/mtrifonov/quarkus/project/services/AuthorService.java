@@ -14,6 +14,7 @@ import com.mtrifonov.quarkus.project.repos.AuthorRepository;
 
 import jakarta.inject.Singleton;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.NotFoundException;
 
 @Singleton
 @Transactional
@@ -48,19 +49,26 @@ public class AuthorService {
 
     
     public AuthorDTO findAuthorById(int id) {
-        return repository.findById(id);
+
+        var author = repository.findById(id);
+
+        if (author == null) {
+            throw new NotFoundException("couldn't find author with id: " + id);
+        }
+
+        return author;
     }
 
     
     public AuthorDTO createAuthor(AuthorDTO author) {
         var result = repository.save(author);
-        cacheService.cleanCachedTotalElements(AUTHORS);
+        cacheService.cleanCachedTotalElements();
         return result;
     } 
 
     public void deleteAuthorById(int id) {
         repository.deleteById(id);
-        cacheService.cleanCachedTotalElements(AUTHORS);
+        cacheService.cleanCachedTotalElements();
     }
 
     private Page<AuthorDTO> toPage(

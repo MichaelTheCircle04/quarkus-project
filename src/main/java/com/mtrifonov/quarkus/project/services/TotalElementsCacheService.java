@@ -8,5 +8,5 @@ import org.jooq.TableLike;
 
 public interface TotalElementsCacheService {
     Number getTotalElements(Table<?> table, Optional<? extends TableLike<?>> join, Optional<? extends Condition> condition);
-    void cleanCachedTotalElements(Table<?> table);
+    void cleanCachedTotalElements();
 }

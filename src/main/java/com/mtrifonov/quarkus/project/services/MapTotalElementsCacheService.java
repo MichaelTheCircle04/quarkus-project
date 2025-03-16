@@ -1,19 +1,14 @@
 package com.mtrifonov.quarkus.project.services;
 
-import static com.mtrifonov.jooq.generated.Tables.AUTHORS;
-import static com.mtrifonov.jooq.generated.Tables.BOOKS;
-
+import static com.mtrifonov.jooq.generated.Tables.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-
 import org.jooq.Condition;
 import org.jooq.Table;
 import org.jooq.TableLike;
-
 import com.mtrifonov.quarkus.project.repos.AuthorRepository;
 import com.mtrifonov.quarkus.project.repos.BookRepository;
-
 import io.quarkus.arc.profile.IfBuildProfile;
 import jakarta.inject.Singleton;
 
@@ -21,8 +16,7 @@ import jakarta.inject.Singleton;
 @IfBuildProfile("map")
 public class MapTotalElementsCacheService implements TotalElementsCacheService {
 
-    private final Map<Optional<? extends Condition>, Integer> authorsMap = new HashMap<>();
-    private final Map<Optional<? extends Condition>, Long> booksMap = new HashMap<>();
+    private final Map<Optional<? extends Condition>, Number> conditionCache = new HashMap<>();
     private final AuthorRepository authorsRepo;
     private final BookRepository booksRepo;
 
@@ -45,23 +39,17 @@ public class MapTotalElementsCacheService implements TotalElementsCacheService {
 
     
     @Override
-    public void cleanCachedTotalElements(Table<?> table) {
-        if (table == AUTHORS) {
-            cleanAuthorsCachedTotalElements();
-        } else if (table == BOOKS) {
-            cleanBooksCachedTotalElements();
-        } else {
-            throw new IllegalArgumentException();
-        }
+    public void cleanCachedTotalElements() {
+        conditionCache.clear();
     }
 
     private Integer getTotalElementsFromAuthors(Optional<? extends TableLike<?>> join, Optional<? extends Condition> condition) {
 
-        Integer total = authorsMap.get(condition);
+        Integer total = (Integer) conditionCache.get(condition);
 
         if (total == null) {
             total = authorsRepo.count(join, condition);
-            authorsMap.put(condition, total);
+            conditionCache.put(condition, total);
         }
 
         return total;
@@ -69,21 +57,13 @@ public class MapTotalElementsCacheService implements TotalElementsCacheService {
 
     private Long getTotalElementsFromBooks(Optional<? extends Condition> condition) {
 
-        Long total = booksMap.get(condition);
+        Long total = (Long) conditionCache.get(condition);
 
         if (total == null) {
             total = booksRepo.count(condition);
-            booksMap.put(condition, total);
+            conditionCache.put(condition, total);
         }
 
         return total;
-    }
-
-    private void cleanAuthorsCachedTotalElements() {
-        authorsMap.clear();
-    }
-
-    private void cleanBooksCachedTotalElements() {
-        booksMap.clear();
     }
 }

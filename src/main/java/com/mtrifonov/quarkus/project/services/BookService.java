@@ -17,6 +17,7 @@ import com.mtrifonov.quarkus.project.repos.BookRepository;
 
 import jakarta.inject.Singleton;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.NotFoundException;
 
 @Singleton
 @Transactional
@@ -31,7 +32,14 @@ public class BookService {
 	}
 	
 	public BookDTO getBookById(long id) {
-		return repository.findById(id);
+
+		var book = repository.findById(id);
+
+		if (book == null) {
+			throw new NotFoundException("couldn't find book with id: " + id);
+		}
+
+		return book;
 	}
 
     public Page<BookDTO> findAllBooks(Optional<PageInformation> information) {
@@ -42,29 +50,22 @@ public class BookService {
 		return toPage(content, Optional.empty(), pageable);
     }
 
-	public Page<BookDTO> findAllBooksWhereTitleLike(String title, Optional<PageInformation> information) {
+	public Page<BookDTO> findAllByString(String word, Optional<PageInformation> information) {
 
-		var condition = Optional.of(BOOKS.TITLE.likeIgnoreCase("%" + title + "%"));
+		var condition = Optional.of(
+			BOOKS.TITLE.likeIgnoreCase("%" + word + "%")
+			.or(AUTHORS.NAME.likeIgnoreCase("%" + word + "%"))
+			);
+
 		var pageable = Paginator.getPageable(information, BOOKS);
 		var content = repository.findAll(condition, pageable);
-
+		
 		return toPage(content, condition, pageable);
 	}
-
 	
 	public Page<BookDTO> findAllBooksByAuthorId(int id, Optional<PageInformation> information) {
 		
 		var condition = Optional.of(BOOKS.AUTHOR_ID.eq(id));
-		var pageable = Paginator.getPageable(information, BOOKS);
-		var content = repository.findAll(condition, pageable);
-		
-		return toPage(content, condition, pageable);
-	}
-
-	
-	public Page<BookDTO> findAllBooksByAuthorName(String name, Optional<PageInformation> information) {
-
-		var condition = Optional.of(AUTHORS.NAME.likeIgnoreCase("%" + name + "%"));
 		var pageable = Paginator.getPageable(information, BOOKS);
 		var content = repository.findAll(condition, pageable);
 		
@@ -79,18 +80,18 @@ public class BookService {
 	//Методы изменяющие дынные, после их применения кэш сбрасывается
 	public BookDTO createBook(BookDTO book) {
 		var result = repository.save(book);
-		cacheService.cleanCachedTotalElements(BOOKS);
+		cacheService.cleanCachedTotalElements();
 		return result;
 	}
 
 	public void setPriceById(long id, int price) {
 		repository.setPriceById(id, price);
-		cacheService.cleanCachedTotalElements(BOOKS);
+		cacheService.cleanCachedTotalElements();
 	}
 
 	public void deleteById(long id) {
 		repository.deleteById(id);
-		cacheService.cleanCachedTotalElements(BOOKS);
+		cacheService.cleanCachedTotalElements();
 	}
 
 	private Page<BookDTO> toPage (List<BookDTO> books, Optional<? extends Condition> condition, Optional<Pageable> optionalPageable) {

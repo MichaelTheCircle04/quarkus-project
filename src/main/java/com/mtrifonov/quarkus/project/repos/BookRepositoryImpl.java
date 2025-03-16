@@ -2,16 +2,11 @@ package com.mtrifonov.quarkus.project.repos;
 
 import org.jooq.Condition;
 import org.jooq.DSLContext;
-import org.jooq.TableLike;
-
 import static com.mtrifonov.jooq.generated.Tables.*;
-
 import java.util.List;
 import java.util.Optional;
-
 import com.mtrifonov.quarkus.project.dto.BookDTO;
 import com.mtrifonov.quarkus.project.pagination.Pageable;
-
 import jakarta.inject.Singleton;
 import lombok.Data;
 

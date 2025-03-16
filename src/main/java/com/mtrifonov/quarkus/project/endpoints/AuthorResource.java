@@ -9,8 +9,8 @@ import org.jboss.resteasy.reactive.RestQuery;
 import com.mtrifonov.quarkus.project.dto.AuthorDTO;
 import com.mtrifonov.quarkus.project.pagination.PageInformation;
 import com.mtrifonov.quarkus.project.services.AuthorService;
-
 import jakarta.inject.Singleton;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
@@ -37,13 +37,19 @@ public class AuthorResource {
     
     @GET
     @Path("/name") //Covered
-    public Response getAuthorsWhereNameLike(@RestQuery String name, PageInformation information) {
+    public Response getAuthorsByName(@RestQuery String name, PageInformation information) {
         return Response.ok(service.findAuthorsByName(name, Optional.of(information))).build();
+    }
+
+    @GET
+    @Path("/title")
+    public Response getAuthorsByBookTitle(@RestQuery String title, PageInformation information) {
+        return Response.ok(service.findAllAuthorsByBookTitle(title, Optional.of(information))).build();
     }
     
     @POST
     @Path("/create") //Covered
-    public Response createAuthor(AuthorDTO author) {
+    public Response createAuthor(@Valid AuthorDTO author) {
         var result = service.createAuthor(author);
         return Response.created(URI.create("http://" + address + "/authors/" + result.getAuthorId())).build();
     }

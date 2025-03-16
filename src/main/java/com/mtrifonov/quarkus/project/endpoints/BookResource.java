@@ -10,6 +10,7 @@ import com.mtrifonov.quarkus.project.dto.BookDTO;
 import com.mtrifonov.quarkus.project.pagination.PageInformation;
 import com.mtrifonov.quarkus.project.services.BookService;
 
+import jakarta.validation.Valid;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
@@ -42,10 +43,9 @@ public class BookResource {
 	}
 
 	@GET
-	@Path("/title") //Covered
-	public Response getAllBooksByTitle(@RestQuery String title, PageInformation information) {
-		var result = bookService.findAllBooksWhereTitleLike(title, Optional.of(information));
-		System.out.println(result);
+	@Path("/search") //Covered
+	public Response getAllBooksContainsWord(@RestQuery String word, PageInformation information) {
+		var result = bookService.findAllByString(word, Optional.of(information));
 		return Response.ok(result).build();
 	}
 
@@ -54,16 +54,10 @@ public class BookResource {
 	public Response getAllBooksByAuthorId(int id, PageInformation information) {
 		return Response.ok(bookService.findAllBooksByAuthorId(id, Optional.of(information))).build();
 	}
-
-	@GET
-	@Path("/author") //Covered
-	public Response getAllBooksByAuthorName (@RestQuery String name, PageInformation information) {
-		return Response.ok(bookService.findAllBooksByAuthorName(name, Optional.of(information))).build();
-	}
 	
 	@POST
 	@Path("/create") //Covered
-	public Response createBook(BookDTO book) {
+	public Response createBook(@Valid BookDTO book) {
 		var result = bookService.createBook(book);
 		return Response.created(URI.create("http://" + address + "/books/" + result.getBookId())).build();
 	}

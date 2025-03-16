@@ -1,5 +1,6 @@
 package com.mtrifonov.quarkus.project.dto;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,6 +12,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class AuthorDTO {
 
-    private int authorId;
+    private Integer authorId;
+    @NotNull
     private String name;
 }

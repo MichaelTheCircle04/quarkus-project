@@ -3,13 +3,14 @@ package com.mtrifonov;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
-
 import org.junit.jupiter.api.Test;
-
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.text.MatchesPattern.*;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import java.util.Map;
 
 import org.hamcrest.CoreMatchers;
 
@@ -19,12 +20,22 @@ class BookResourceTest {
     
     @Test
     void testBookEndpointGetRequest() {
-   	
+
     	given()
             .when().get("/books/1")
                 .then()
                     .statusCode(200)
                     .body(containsString("Вечер у Клэр"));
+    }
+
+    @Test
+    void testBookEndpointGetRequestInvalidId() {
+        
+        given()
+            .when().get("/books/10")
+                .then()
+                    .statusCode(404)
+                    .body(containsString("couldn't find book with id: 10"));
     }
 
     @Test
@@ -50,8 +61,8 @@ class BookResourceTest {
             .param("pageNum", 0)
             .param("pageSize", 2)
             .param("sort", "author_id, asc")
-            .param("title", "вече")
-            .when().get("/books/title")
+            .param("word", "вече")
+            .when().get("/books/search")
                 .then()
                     .statusCode(200)
                     .extract().response();
@@ -75,8 +86,8 @@ class BookResourceTest {
                     .statusCode(200)
                     .extract().response();
 
-        assertTrue(response.jsonPath().getString("content[0].title").equals("Тимур и его команда"));
-        assertTrue(response.jsonPath().getString("content[1].title").equals("Чук и Гек"));
+        var titles = response.jsonPath().getList("content").stream().map(o -> (String) ((Map<String, Object>) o).get("title")).toList();
+        assertThat(titles, contains("Тимур и его команда", "Чук и Гек"));
     }
 
     @Test
@@ -86,14 +97,14 @@ class BookResourceTest {
             .param("pageNum", 0)
             .param("pageSize", 2)
             .param("sort", "title, asc")
-            .param("name", "гай")
-            .when().get("/books/author")
+            .param("word", "гай")
+            .when().get("/books/search")
                 .then()
                     .statusCode(200)
                     .extract().response();
 
-        assertTrue(response.jsonPath().getString("content[0].title").equals("Вечер у Клэр"));
-        assertTrue(response.jsonPath().getString("content[1].title").equals("Возвращение Будды"));
+        var titles = response.jsonPath().getList("content").stream().map(o -> (String) ((Map<String, Object>) o).get("title")).toList();
+        assertThat(titles, contains("Вечер у Клэр", "Возвращение Будды"));
     }
 
     @Test
@@ -130,5 +141,15 @@ class BookResourceTest {
         		    .then()
         			    .statusCode(201)
                         .header("location", matchesPattern("^(https?:\\/\\/[a-zA-Z0-9.-]+(:\\d+)?\\/books\\/\\d+)$"));
+    }
+
+    @Test
+    void testBookEndpointPostRequestInvalidBody() {
+
+        given().contentType(ContentType.JSON)
+            .body("{\"title\": \"Ночные дороги\"}")
+                .when().post("/books/create")
+                    .then()
+                        .statusCode(400);
     }
 }
